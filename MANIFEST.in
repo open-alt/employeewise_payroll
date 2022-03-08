@@ -1,0 +1,18 @@
+include MANIFEST.in
+include requirements.txt
+include *.json
+include *.md
+include *.py
+include *.txt
+recursive-include employeewise_payroll *.css
+recursive-include employeewise_payroll *.csv
+recursive-include employeewise_payroll *.html
+recursive-include employeewise_payroll *.ico
+recursive-include employeewise_payroll *.js
+recursive-include employeewise_payroll *.json
+recursive-include employeewise_payroll *.md
+recursive-include employeewise_payroll *.png
+recursive-include employeewise_payroll *.py
+recursive-include employeewise_payroll *.svg
+recursive-include employeewise_payroll *.txt
+recursive-exclude employeewise_payroll *.pyc
