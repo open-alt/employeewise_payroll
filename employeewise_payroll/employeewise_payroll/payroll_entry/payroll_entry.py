@@ -68,7 +68,7 @@ class CustomPayrollEntry(PayrollEntry):
 				"payroll_entry": self.name,
 				"docstatus": 1,
 			},
-			fields = ["employee", "sum(net_pay) as net_pay"],
+			fields = ["employee", "sum(base_gross_pay) - sum(base_total_deduction) as net_pay"],
 			group_by = "employee"
 		)
 
