@@ -1,8 +1,10 @@
 import frappe
 from frappe import _
 from erpnext.payroll.doctype.payroll_entry.payroll_entry import PayrollEntry
+from erpnext.accounts.utils import get_account_currency
+from erpnext.accounts.doctype.journal_entry.journal_entry import get_default_bank_cash_account
 
-from frappe.utils import flt
+from frappe.utils import flt, nowdate
 import erpnext
 
 
@@ -120,3 +122,154 @@ class CustomPayrollEntry(PayrollEntry):
 			frappe.throw(_(":-("))
 
 		return self.save_journal_entry(journal_entry)
+
+
+def get_payment_entry(doc, journal_entry, liability_entry, payment_account, received_amount,
+					grand_total = None, outstanding_amount = None, remark = None):
+	"""
+		doc: frappe.model.document.Document
+		journal_entry: journal_entry which need to repay
+		liability_entry: one of journal_entry.accounts row thats has liability
+	"""
+
+
+	party_type = liability_entry.get("party_type")
+	party = liability_entry.get("party")
+	party_account = liability_entry.get("account")
+	party_account_currency = get_account_currency(party_account)
+	payment_account_currency = get_account_currency(payment_account)
+	payment_type = "Pay" if liability_entry.get("credit_in_account_currency") else "Receive"
+	grand_total, outstanding_amount = get_grand_total_and_outstanding_amount(grand_total, outstanding_amount, journal_entry, liability_entry, payment_type)
+
+	# bank or cash
+	#payment_account = get_default_bank_cash_account(journal_entry.get("company"), account_type = account_type)
+
+	# paid_amount, received_amount = set_paid_amount_and_received_amount(
+	# 	dt, party_account_currency, bank, outstanding_amount, payment_type, bank_amount, doc)
+
+	# paid_amount, received_amount, discount_amount = apply_early_payment_discount(paid_amount, received_amount, doc)
+
+	pe = frappe.new_doc("Payment Entry")
+	pe.payment_type = payment_type
+	pe.company = journal_entry.company
+	pe.cost_center = liability_entry.get("cost_center")
+	pe.posting_date = nowdate()
+	pe.party_type = party_type
+	pe.party = liability_entry.get("party")
+
+	pe.paid_from = party_account if payment_type=="Receive" else payment_account
+	pe.paid_to = party_account if payment_type=="Pay" else payment_account
+	pe.paid_from_account_currency = party_account_currency \
+		if payment_type=="Receive" else payment_account_currency
+	pe.paid_to_account_currency = party_account_currency if payment_type=="Pay" else payment_account_currency
+	pe.received_amount = received_amount
+	pe.paid_amount = received_amount
+	#pe.remark= remark
+
+	pe.project = liability_entry.get('project')
+
+	pe.append("references", {
+		'reference_doctype': "Journal Entry",
+		'reference_name': journal_entry.name,
+		'total_amount': grand_total,
+		'outstanding_amount': outstanding_amount,
+		'allocated_amount': outstanding_amount
+	})
+
+
+	pe.setup_party_account_field()
+	pe.set_missing_values()
+
+	return pe
+
+
+def get_grand_total_and_outstanding_amount(grand_total, outstanding_amount, journal_entry, account, payment_type):
+	if not grand_total:
+		grand_total = account.get("credit_in_account_currency") if payment_type == "Pay"\
+			else account.get("debit_in_account_currency")
+
+	if not outstanding_amount:
+		outstanding_amount = grand_total
+
+	return grand_total, outstanding_amount
+
+
+def make_payment_entry(salary_slips, payroll_entry, payroll_account, payment_account):
+	for ss in salary_slips:
+		doc = frappe.get_doc("Salary Slip", ss["name"])
+		if not salary_payment_entry_exists(doc, doc.journal_entry, payroll_entry):
+			journal_entry = frappe.get_doc("Journal Entry", doc.journal_entry)
+
+			if doc.mode_of_payment:
+				payment_account = get_default_bank_cash_account(journal_entry.get("company"), account_type = doc.mode_of_payment)
+				payment_account = payment_account.get("account")
+
+			received_amount = doc.get("base_net_pay")
+			outstanding_amount = doc.get("base_net_pay")
+			liability_entry = list(filter(lambda x: x.party == doc.employee and x.account == payroll_account,
+							journal_entry.accounts))
+
+			if liability_entry:
+				pe = get_payment_entry(doc, journal_entry, liability_entry[0], payment_account,
+						received_amount,
+						outstanding_amount = outstanding_amount
+				)
+				pe.payroll_entry = payroll_entry
+
+				pe.save()
+				pe = None
+
+	return
+
+
+
+
+def salary_payment_entry_exists(salary_slip, journal_entry, payroll_entry):
+	exist = frappe.get_all("Payment Entry", fields = ["COUNT(*) AS `count`"], filters = {
+		"party": salary_slip.employee,
+		"payroll_entry": payroll_entry,
+		"docstatus": ["<", 2],
+	})
+	return exist[0]["count"]
+
+
+@frappe.whitelist()
+def payroll_payment_entry_exists(payroll_entry):
+	salary_slips = frappe.get_all("Salary Slip",
+		filters = {
+			"payroll_entry": payroll_entry,
+			"docstatus": 1,
+			"journal_entry": ["is", "set"]
+	})
+
+
+	all_exist = True
+	any_exist = False
+
+	for ss in salary_slips:
+		doc = frappe.get_doc("Salary Slip", ss["name"])
+		exist = salary_payment_entry_exists(doc, doc.journal_entry, payroll_entry)
+		all_exist = all_exist and exist
+		any_exist = any_exist or exist
+
+	return {"any_exist" : any_exist, "all_exist": all_exist}
+
+
+
+
+@frappe.whitelist()
+def cash_payment(payroll_entry):
+	payroll_entry = frappe.get_doc("Payroll Entry", payroll_entry)
+
+	salary_slips = frappe.get_all("Salary Slip",
+		filters = {
+			"payroll_entry": payroll_entry.name,
+			"docstatus": 1,
+			"journal_entry": ["is", "set"]
+	})
+
+	payroll_account = payroll_entry.payroll_payable_account
+	payment_account = payroll_entry.payment_account
+
+	make_payment_entry(salary_slips, payroll_entry.name, payroll_account, payment_account)
+	return payroll_entry.name

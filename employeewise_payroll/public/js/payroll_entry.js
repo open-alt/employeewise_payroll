@@ -11,7 +11,49 @@ frappe.ui.form.on("Payroll Entry", {
 			}
 			return res;
 		});
+		frm.trigger("action")
 	},
+	action: function(frm){
+		frm.events.check_existing(frm, function(r){
+			if(! r.message["all_exist"]){
+					frm.add_custom_button(__("Make Payment Entries"), function(){
+						cash_payment(frm.doc.name);
+				});
+			}
 
-	
+			if(r.message["any_exist"]){
+				frm.remove_custom_button(__("Make Bank Entry"))
+				frm.add_custom_button(__("Payment Entries"), function(){
+						go_to_payment(frm.doc.name);
+				});
+			}
+		});
+	},
+	check_existing: function(frm, callback_method){
+		frappe.call({
+			method: "employeewise_payroll.employeewise_payroll.payroll_entry.payroll_payment_entry_exists",
+			args:{
+				payroll_entry: frm.doc.name,
+			},
+			callback: callback_method
+		});
+	},
 });
+
+function go_to_payment(payroll_entry){
+	frappe.set_route("List", "Payment Entry", {"payroll_entry": payroll_entry});
+}
+
+function cash_payment(payroll_entry){
+	frappe.call({
+		method: "employeewise_payroll.employeewise_payroll.payroll_entry.cash_payment",
+		args:{
+			payroll_entry: payroll_entry,
+		},
+		callback: function(r){
+			if (r.message){
+				go_to_payment(r.message)
+			}
+		}
+	});
+}
