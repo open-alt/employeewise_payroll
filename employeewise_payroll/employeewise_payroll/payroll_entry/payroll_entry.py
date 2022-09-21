@@ -4,8 +4,7 @@ from erpnext.payroll.doctype.payroll_entry.payroll_entry import PayrollEntry
 from erpnext.accounts.utils import get_account_currency
 from erpnext.accounts.doctype.journal_entry.journal_entry import get_default_bank_cash_account
 
-from frappe.utils import flt, nowdate
-import erpnext
+from frappe.utils import flt, nowdate, get_link_to_form
 
 
 class CustomPayrollEntry(PayrollEntry):
@@ -15,6 +14,14 @@ class CustomPayrollEntry(PayrollEntry):
 		else:
 			return super().make_accrual_jv_entry(*args, **kwargs)
 
+	def validate_payroll_payable_account(self):
+		account_type = frappe.db.get_value("Account", self.payroll_payable_account, "account_type")
+		if account_type != "Payable":
+			frappe.throw(
+				_(
+					"Account type must be Payable for payroll payable account {0}, please changed and try again"
+				).format(frappe.bold(get_link_to_form("Account", self.payroll_payable_account)))
+			)
 
 	def _turn_off_payablle(self):
 		account_type = frappe.db.get_value("Account", self.payroll_payable_account, "account_type")
@@ -23,10 +30,8 @@ class CustomPayrollEntry(PayrollEntry):
 
 		return account_type
 
-
 	def _restore_account_type(self, account_type):
 		frappe.db.set_value("Account", self.payroll_payable_account, "account_type", account_type)
-
 
 	def _delete_gl_entries(self, journal_entry):
 		gl_enteries = frappe.get_all("GL Entry",
@@ -67,7 +72,6 @@ class CustomPayrollEntry(PayrollEntry):
 
 		return new_journal_entry
 
-
 	def get_salary_slips(self, journal_entry, precision):
 		salary_slips = frappe.get_all("Salary Slip",
 			filters = {
@@ -89,7 +93,6 @@ class CustomPayrollEntry(PayrollEntry):
 
 		return salary_slips, account
 
-
 	def save_journal_entry(self, journal_entry):
 		journal_entry.save()
 		try:
@@ -102,7 +105,6 @@ class CustomPayrollEntry(PayrollEntry):
 			raise
 
 		return jv_name
-
 
 	def employeewise_journal_entry(self, *args, **kwargs):
 		journal_entry = self.create_parent_jv(*args, **kwargs)
@@ -119,7 +121,6 @@ class CustomPayrollEntry(PayrollEntry):
 				account_dict["party"] = i["employee"]
 				account_dict["credit_in_account_currency"] = flt(i["net_pay"], precision)
 				journal_entry.append("accounts", account_dict)
-
 
 			journal_entry.remove(account[0])
 		else:
