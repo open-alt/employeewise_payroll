@@ -39,17 +39,21 @@ class CustomPayrollEntry(PayrollEntry):
 			frappe.db.set_value("GL Entry", i["name"], "docstatus", 2)
 			frappe.delete_doc("GL Entry", i["name"])
 
-
 	def _replace_journal_entry(self, jv_name):
 		journal_entry = frappe.get_doc("Journal Entry", jv_name)
 		self._delete_gl_entries(journal_entry)
 		new_journal_entry = journal_entry.as_dict()
-		journal_entry.cancel()
-		journal_entry.delete()
+		self._delete_journal_entry(journal_entry)
 		del new_journal_entry["name"]
 		del new_journal_entry["docstatus"]
 		return new_journal_entry
 
+	def _delete_journal_entry(self, journal_entry):
+		journal_entry.cancel()
+		frappe.db.sql(
+			"delete from `tabGL Entry` where voucher_type=%s and voucher_no=%s", (journal_entry.doctype, journal_entry.name)
+		)
+		journal_entry.delete()
 
 	def create_parent_jv(self, *args, **kwargs):
 		account_type = self._turn_off_payablle()
