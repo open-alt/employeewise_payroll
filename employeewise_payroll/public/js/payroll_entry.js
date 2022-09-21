@@ -14,20 +14,26 @@ frappe.ui.form.on("Payroll Entry", {
 		frm.trigger("action")
 	},
 	action: function(frm){
-		frm.events.check_existing(frm, function(r){
-			if(! r.message["all_exist"]){
-					frm.add_custom_button(__("Make Payment Entries"), function(){
-						cash_payment(frm.doc.name);
-				});
-			}
+		if (frm.doc.salary_slips_submitted){
+			frm.remove_custom_button(__("Submit Salary Slip"));
+		}
+		if (frm.doc.employeewise_payroll){
+			frm.remove_custom_button(__("Make Bank Entry"));
+			frm.events.check_existing(frm, function(r){
+				if(! r.message["all_exist"]){
+						frm.add_custom_button(__("Make Payment Entries"), function(){
+							cash_payment(frm.doc.name);
+						});
+						frm.change_custom_button_type(__("Make Payment Entries"), null, "primary")
+				}
 
-			if(r.message["any_exist"]){
-				frm.remove_custom_button(__("Make Bank Entry"))
-				frm.add_custom_button(__("Payment Entries"), function(){
-						go_to_payment(frm.doc.name);
-				});
-			}
-		});
+				if(r.message["any_exist"]){
+					frm.add_custom_button(__("Payment Entries"), function(){
+							go_to_payment(frm.doc.name);
+					});
+				}
+			});
+		}
 	},
 	check_existing: function(frm, callback_method){
 		frappe.call({
