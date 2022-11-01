@@ -1,6 +1,6 @@
 import frappe
 from frappe import _
-from erpnext.payroll.doctype.payroll_entry.payroll_entry import PayrollEntry
+from employeewise_payroll.hooks import PayrollEntry
 from erpnext.accounts.utils import get_account_currency
 from erpnext.accounts.doctype.journal_entry.journal_entry import get_default_bank_cash_account
 

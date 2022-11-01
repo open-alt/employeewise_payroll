@@ -1,4 +1,6 @@
 from . import __version__ as app_version
+from frappe.model.base_document import get_controller
+PayrollEntry = get_controller("Payroll Entry")
 
 app_name = "employeewise_payroll"
 app_title = "Employeewise Payroll"

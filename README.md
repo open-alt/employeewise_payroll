@@ -16,8 +16,8 @@ Customize payroll to record each employee Liability and pay them in cash instead
 
 ## Installation.
 #### 1. Dependencies
-1. Frappe (version-13) (tested on _v13.37.1_).
-1. ERPNext (version-13) (tested on _v13.36.3_).
+1. Frappe (version-13) (tested on _v13.37.1_) and (version-14) (tested on _v14.12.0_).
+1. ERPNext (version-13) (tested on _v13.36.3_) and (version-14) (tested on _v14.3.1_).
 
 #### 2. Installation.
 
@@ -59,6 +59,6 @@ Use it in `Payroll Entry` by
 >
 > *then* `Make Payment Entries` will only make **payments** for **these** who have **cancelled** or no `Payment Entry`
 
-#### License
+## License
 
 GNU General Public License (v3+)
