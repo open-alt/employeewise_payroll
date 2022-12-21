@@ -1,6 +1,21 @@
 from . import __version__ as app_version
-from frappe.model.base_document import get_controller
-PayrollEntry = get_controller("Payroll Entry")
+
+
+def get_payroll_controller():
+	from frappe.model.base_document import get_controller
+	try:
+		PayrollEntry = get_controller("Payroll Entry")
+		return PayrollEntry
+	except ImportError:
+		try:
+			from erpnext.payroll.doctype.payroll_entry.payroll_entry import PayrollEntry
+			return PayrollEntry
+		except (ModuleNotFoundError, ImportError):
+			from hrms.payroll.doctype.payroll_entry.payroll_entry import PayrollEntry
+			return PayrollEntry
+
+
+PayrollEntry = get_payroll_controller()
 
 app_name = "employeewise_payroll"
 app_title = "Employeewise Payroll"
