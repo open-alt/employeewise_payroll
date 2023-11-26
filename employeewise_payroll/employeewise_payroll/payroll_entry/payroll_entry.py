@@ -15,13 +15,16 @@ class CustomPayrollEntry(PayrollEntry):
 			return super().make_accrual_jv_entry(*args, **kwargs)
 
 	def validate_payroll_payable_account(self):
-		account_type = frappe.db.get_value("Account", self.payroll_payable_account, "account_type")
-		if account_type != "Payable":
-			frappe.throw(
-				_(
-					"Account type must be Payable for payroll payable account {0}, please changed and try again"
-				).format(frappe.bold(get_link_to_form("Account", self.payroll_payable_account)))
-			)
+		if self.employeewise_payroll:
+			account_type = frappe.db.get_value("Account", self.payroll_payable_account, "account_type")
+			if account_type != "Payable":
+				frappe.throw(
+					_(
+						"Account type must be Payable for payroll payable account {0}, please changed and try again"
+					).format(frappe.bold(get_link_to_form("Account", self.payroll_payable_account)))
+				)
+		else:
+			super().validate_payroll_payable_account()
 
 	def _turn_off_payablle(self):
 		account_type = frappe.db.get_value("Account", self.payroll_payable_account, "account_type")
@@ -262,7 +265,7 @@ def payroll_payment_entry_exists(payroll_entry):
 		all_exist = all_exist and exist
 		any_exist = any_exist or exist
 
-	return {"any_exist" : any_exist, "all_exist": all_exist}
+	return {"any_exist": any_exist, "all_exist": all_exist}
 
 
 @frappe.whitelist()
