@@ -15,7 +15,29 @@ def get_payroll_controller():
 			return PayrollEntry
 
 
+def get_loan_repayment_controller():
+	from frappe.model.base_document import get_controller
+	try:
+		LoanRepayment = get_controller("Loan Repayment")
+		return LoanRepayment
+	except ImportError:
+		from erpnext.loan_management.doctype.loan_repayment.loan_repayment import LoanRepayment
+		return LoanRepayment
+
+
+def get_payment_entry_controller():
+	from frappe.model.base_document import get_controller
+	try:
+		PaymentEntry = get_controller("Payment Entry")
+		return PaymentEntry
+	except ImportError:
+		from erpnext.accounts.doctype.payment_entry.payment_entry import PaymentEntry
+		return PaymentEntry
+
+
 PayrollEntry = get_payroll_controller()
+LoanRepayment = get_loan_repayment_controller()
+PaymentEntry = get_payment_entry_controller()
 
 app_name = "employeewise_payroll"
 app_title = "Employeewise Payroll"
@@ -99,7 +121,9 @@ doctype_js = {"Payroll Entry" : "public/js/payroll_entry.js"}
 # Override standard doctype classes
 
 override_doctype_class = {
-	"Payroll Entry": "employeewise_payroll.employeewise_payroll.payroll_entry.CustomPayrollEntry"
+	"Payroll Entry": "employeewise_payroll.employeewise_payroll.payroll_entry.CustomPayrollEntry",
+	"Loan Repayment": "employeewise_payroll.employeewise_payroll.loan_repayment.CustomLoanRepayment",
+	"Payment Entry": "employeewise_payroll.employeewise_payroll.payment_entry.CustomPaymentEntry",
 }
 
 # Document Events
